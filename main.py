@@ -1,25 +1,14 @@
 import sys
+import logging
 
 import numpy as np
+import networkx as nx
 import osmnx as ox
 import pandas as pd
 import time as time
 import matplotlib.pyplot as plt
+import requests
 
-def main():
-    address = "600 Montgomery St, San Francisco, California, USA"
-
-    place = "San Francisco"
-    G = ox.graph_from_place(place_query, network_type="drive")
-
-    G = add_node_elevations_open(G)
-    G = ox.elevation.add_edge_grades(G)
-
-    nc = ox.plot.get_node_colors_by_attr(G, "elevation", cmap="plasma")
-    fig, ax = ox.plot_graph(G, node_color=nc, node_size=5, edge_color="#333333", bgcolor="k")
-
-if __name__ == "__main__":
-    main()
 
 def add_node_elevations_open(G, max_locations_per_batch=350, precision=3, add_edge_grades=True):
     """
@@ -108,6 +97,29 @@ def add_node_elevations_open(G, max_locations_per_batch=350, precision=3, add_ed
 
         # add grade absolute value to the edge attributes
         nx.set_edge_attributes(G, dict(zip(uvk, np.abs(grades))), name="grade_abs")
-        utils.log("Added grade attributes to all edges.")
+        logging.debug("Added grade attributes to all edges.")
 
     return G
+
+
+def main():
+    point = (59.979380, 13.089121)
+
+    G = ox.graph_from_point(point, dist=10000, network_type="drive")
+
+    G = add_node_elevations_open(G)
+    G = ox.elevation.add_edge_grades(G)
+
+    nc = ox.plot.get_node_colors_by_attr(G, "elevation", cmap="plasma")
+    fig, ax = ox.plot_graph(G, node_color=nc, node_size=5, edge_color="#333333", bgcolor="k", show=False)
+
+    elevations = np.array(list(nx.get_node_attributes(G, "elevation").values()))
+    print(nx.get_node_attributes(G, "elevation"))
+    sm = plt.cm.ScalarMappable(norm=plt.Normalize(vmin=elevations.min(), vmax=elevations.max()))
+    sm._A = []
+    fig.colorbar(sm)
+    plt.show()
+
+if __name__ == "__main__":
+    main()
+
